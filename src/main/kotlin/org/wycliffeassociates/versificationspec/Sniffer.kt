@@ -1,11 +1,15 @@
 package org.wycliffeassociates.versificationspec
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.util.JSONPObject
-import org.wycliffeassociates.org.wycliffeassociates.versificationspec.Versification
+import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import org.wycliffeassociates.versificationspec.entity.Address
+import org.wycliffeassociates.versificationspec.entity.ParsedTest
+import org.wycliffeassociates.versificationspec.entity.Rule
+import org.wycliffeassociates.versificationspec.entity.Versification
 import java.io.File
 import java.io.FileWriter
-import java.io.IOException
 import java.util.logging.Logger
 import java.util.regex.Pattern
 import kotlin.collections.HashMap
@@ -15,13 +19,13 @@ object canons {
 }
 
 class Sniffer(
-    books: Map<String, Map<String, Map<String, Any>>>,
+    books: Map<String, Map<String, Map<String, String>>>,
     outdir: String = "../../data/output/",
     vrs: Boolean = false,
     mappings: String = "../../versification-mappings/standard-mappings",
     rules: String = "../rules/merged_rules.json"
 ) {
-    private val books = HashMap<String, MutableMap<Int, MutableMap<String, Any>>>()
+    private val _books = HashMap<String, MutableMap<Int, MutableMap<String, String>>>()
     private lateinit var versification: Versification
     private val verseIndex = HashMap<String, Any>()
     private val args = hashMapOf("outdir" to outdir, "vrs" to vrs, "mappings" to mappings, "rules" to rules)
@@ -32,15 +36,15 @@ class Sniffer(
     init {
         // Ensure all chapters are int and verses are str
         for ((b, bookMap) in books) {
-            val chapterMap = HashMap<Int, MutableMap<String, Any>>()
+            val chapterMap = HashMap<Int, MutableMap<String, String>>()
             for ((c, chapterMapRaw) in bookMap) {
-                val verseMap = HashMap<String, Any>()
+                val verseMap = HashMap<String, String>()
                 for ((v, verse) in chapterMapRaw) {
                     verseMap[v.toString()] = verse
                 }
                 chapterMap[c.toInt()] = verseMap
             }
-            this.books[b] = chapterMap
+            this._books[b] = chapterMap
         }
 
         // Ensure output path is present
@@ -55,24 +59,23 @@ class Sniffer(
         versification.shortname = versificationName
         maxVerses()
         mappedVerses()
-        versification.partialVerses.forEach { key, value ->
-            (value as MutableList<*>).sort()
-        }
+//        versification.partialVerses.forEach { key, value ->
+//            (value as MutableList<*>).sort() // TODO
+//        }
         val outfile = "${args["outdir"]}/$versificationName.json"
         FileWriter(outfile).use { it.write(versification.toString()) }
     }
 
     private fun maxVerses() {
-        versification.maxVerses = HashMap<String, MutableList<Int>>()
-        versification.partialVerses = HashMap<String, MutableList<String>>()
-        versification.verseMappings = HashMap<String, String>()
-        versification.excludedVerses = HashMap<String, String>()
-        versification.unexcludedVerses = HashMap<String, String>()
+        versification.maxVerses = mutableMapOf<String, List<Int>>()
+        versification.partialVerses = mutableMapOf<String, MutableList<String>>()
+        versification.verseMappings = mutableMapOf<String, String>()
+        versification.excludedVerses = mutableListOf<String>()
 
         for (book in canons.bookIds) {
-            if (books.containsKey(book)) {
+            if (_books.containsKey(book)) {
                 val maxVerses = HashMap<Int, Int>()
-                for ((chapter, verses) in books[book]!!) {
+                for ((chapter, verses) in _books[book]!!) {
                     for (verse in verses.keys) {
                         partial(book, chapter, verse)
                         val verseNum = Pattern.compile("\\d+").matcher(verse).let { matcher ->
@@ -101,68 +104,71 @@ class Sniffer(
                 if (!versification.partialVerses.containsKey(id)) {
                     (versification.partialVerses as HashMap<String, MutableList<String>>)[id] = mutableListOf()
                     if (findVerse(book, chapter, numeric) != null) {
-                        versification.partialVerses[id]!!.add("-")
+                        versification.partialVerses[id]?.add("-")
                     }
                 }
-                versification.partialVerses[id]!!.add(segment.value)
+                versification.partialVerses[id]?.add(segment.value)
             }
         }
     }
 
     private fun mappedVerses() {
-        val rules = File(args["rules"]!!).readText().let { text ->
-            val jsonParser = JsonParser()
-            jsonParser.parse(text).asJsonArray
+        val rules: List<Rule> = File(args["rules"].toString()).readText().let { text ->
+            val mapper = ObjectMapper(JsonFactory()).registerKotlinModule()
+            mapper.readValue(text)
         }
         for (rule in rules) {
-            val ruleObject = rule.asJsonObject
             Logger.getLogger(Sniffer::class.java.name).info("-------------------------")
-            Logger.getLogger(Sniffer::class.java.name).info("Rule: " + ruleObject["name"].asString)
-            val fromColumn = mapFrom(ruleObject)
+            Logger.getLogger(Sniffer::class.java.name).info("Rule: " + rule.name)
+            val fromColumn = mapFrom(rule)
             if (fromColumn != null) {
-                val toColumn = mapTo(ruleObject)
+                val toColumn = mapTo(rule)
                 if (fromColumn != toColumn) {
-                    createMappings(ruleObject, fromColumn, toColumn)
+                    createMappings(rule, fromColumn, toColumn!!)
                 }
             }
         }
     }
 
-    private fun doTest(parsedTest: JsonObject): Boolean {
+    private fun doTest(parsedTest: ParsedTest): Boolean {
         Logger.getLogger(Sniffer::class.java.name).info("doTest()")
-        val left = parsedTest["left"].asJsonObject["parsed"].asJsonObject
-        val right = parsedTest["right"].asJsonObject["parsed"].asJsonObject
-        val op = parsedTest["op"].asString
-        val keyword = if (right.has("keyword")) right["keyword"].asString else null
+        val left = parsedTest.left.parsed
+        val right = parsedTest.right.parsed
+        val op = parsedTest.op
 
+        val keyword = right["keyword"]
         Logger.getLogger(Sniffer::class.java.name).info(left.toString())
         Logger.getLogger(Sniffer::class.java.name).info(op)
         Logger.getLogger(Sniffer::class.java.name).info(right.toString())
 
-        if (!bookExists(left["book"].asString)) {
-            Logger.getLogger(Sniffer::class.java.name).info(left["book"].asString + " not found in books")
+        val book = left["book"]!!
+        val chapter = left["chapter"]!!.toInt()
+        val verse = left["verse"]!!.toInt()
+
+        if (!bookExists(book)) {
+            Logger.getLogger(Sniffer::class.java.name).info(left["book"] + " not found in books")
             return false
-        } else if (!chapterExists(left["book"].asString, left["chapter"].asInt)) {
-            Logger.getLogger(Sniffer::class.java.name).info("Chapter " + left["chapter"].asInt + " not found in " + left["book"].asString)
+        } else if (!chapterExists(book, chapter)) {
+            Logger.getLogger(Sniffer::class.java.name).info("Chapter " + left["chapter"] + " not found in " + left["book"])
             return false
         } else {
-            Logger.getLogger(Sniffer::class.java.name).info(left["book"].asString + " found in books")
+            Logger.getLogger(Sniffer::class.java.name).info(left["book"] + " found in books")
         }
 
         when {
-            op == "=" && keyword == "Last" -> if (!isLastInChapter(left["book"].asString, left["chapter"].asInt, left["verse"].asInt)) {
+            op == "=" && keyword == "Last" -> if (!isLastInChapter(book, chapter, verse)) {
                 return false
             }
-            op == "=" && keyword == "Exist" -> if (findVerse(left["book"].asString, left["chapter"].asInt, left["verse"].asInt) == null) {
+            op == "=" && keyword == "Exist" -> if (findVerse(book, chapter, verse.toString()) == null) {
                 return false
             }
-            op == "=" && keyword == "NotExist" -> if (findVerse(left["book"].asString, left["chapter"].asInt, left["verse"].asInt) != null) {
+            op == "=" && keyword == "NotExist" -> if (findVerse(book, chapter, verse.toString()) != null) {
                 return false
             }
-            op == "<" && right.has("chapter") -> if (hasMoreWords(left, right)) {
+            op == "<" && right.containsKey("chapter") -> if (hasMoreWords(left, right)) {
                 return false
             }
-            op == ">" && right.has("chapter") -> if (hasFewerWords(left, right)) {
+            op == ">" && right.containsKey("chapter") -> if (hasFewerWords(left, right)) {
                 return false
             }
             else -> {
@@ -178,8 +184,8 @@ class Sniffer(
     }
 
     private fun findVerse(bb: String, cc: Int, vv: String): Any? {
-        return if (books.containsKey(bb) && books[bb]!!.containsKey(cc) && books[bb]!![cc]!!.containsKey(vv)) {
-            books[bb]!![cc]!![vv]
+        return if (_books.containsKey(bb) && _books[bb]!!.containsKey(cc) && _books[bb]!![cc]!!.containsKey(vv)) {
+            _books[bb]!![cc]!![vv]
         } else {
             null
         }
@@ -197,22 +203,30 @@ class Sniffer(
         }
     }
 
-    private fun hasMoreWords(ref: JsonObject, comparison: JsonObject): Boolean {
-        val refString = findVerse(ref["book"].asString, ref["chapter"].asInt, ref["verse"].asString).toString()
-        val comparisonString = findVerse(comparison["book"].asString, comparison["chapter"].asInt, comparison["verse"].asString).toString()
-        Logger.getLogger(Sniffer::class.java.name).info("hasMoreWords()")
-        Logger.getLogger(Sniffer::class.java.name).info(ref.toString())
-        Logger.getLogger(Sniffer::class.java.name).info(comparison.toString())
-        Logger.getLogger(Sniffer::class.java.name).info(refString)
-        Logger.getLogger(Sniffer::class.java.name).info(comparisonString)
-        Logger.getLogger(Sniffer::class.java.name).info(refString.length > comparisonString.length)
-        val refFactor = if (ref.has("factor")) ref["factor"].asInt else 1
-        val comparisonFactor = if (comparison.has("factor")) comparison["factor"].asInt else 1
+    private fun hasMoreWords(ref: Map<String, String>, comparison: Map<String, String>): Boolean {
+        val refBook = ref["book"]!!
+        val refChapter = ref["chapter"]!!.toInt()
+        val refVerse = ref["verse"]!!
+
+        val refString = findVerse(
+            refBook,
+            refChapter,
+            refVerse
+        ).toString()
+
+        val comparisonString = findVerse(
+            comparison["book"]!!,
+            comparison["chapter"]!!.toInt(),
+            comparison["verse"]!!
+        ).toString()
+
+        val refFactor = ref.getOrDefault("factor", "1").toInt()
+        val comparisonFactor = comparison.getOrDefault("factor", "1").toInt()
         return refString.length * refFactor > comparisonString.length * comparisonFactor
     }
 
-    private fun hasFewerWords(ref: JsonObject, comparison: JsonObject) {
-        hasMoreWords(comparison, ref)
+    private fun hasFewerWords(ref: Map<String, String>, comparison: Map<String, String>): Boolean {
+        return hasMoreWords(comparison, ref)
     }
 
     private fun bookExists(book: String): Boolean {
@@ -223,20 +237,20 @@ class Sniffer(
         return bookExists(book) && chapter <= (versification.maxVerses[book] as List<*>).size
     }
 
-    private fun mapFrom(rule: JsonObject): Int? {
-        val tests = rule["tests"].asJsonArray
-        for (column in 0 until tests.size()) {
-            if (allTestsPass(tests[column].asJsonArray)) {
-                return column
+    private fun mapFrom(rule: Rule): Int? {
+        val tests = rule.tests
+        for (columnIndex in tests.indices) {
+            if (allTestsPass(tests[columnIndex])) {
+                return columnIndex
             }
         }
         return null
     }
 
-    private fun allTestsPass(tests: JsonArray): Boolean {
+    private fun allTestsPass(tests: List<String>): Boolean {
         for (test in tests) {
-            val pt = parseTest(test.asString)
-            if (!doTest(pt)) {
+            val pt = parseTest(test)
+            if (pt == null || !doTest(pt)) {
                 Logger.getLogger(Sniffer::class.java.name).info("doTest() returns false")
                 return false
             }
@@ -245,74 +259,77 @@ class Sniffer(
         return true
     }
 
-    private fun parseTest(test: String): JsonObject {
-        val d = JsonObject()
-        val t = Pattern.compile("""([<=>])""")
-        val triple = t.split(test)
-        if (triple.size != 3) {
-            Logger.getLogger(Sniffer::class.java.name).info("ERROR: Does not parse: $test")
+    private fun parseTest(test: String): ParsedTest? {
+        val regex = Regex("([<=>])")
+        val groups = regex.split(test)
+
+        return if (groups.size == 2 && test.contains(regex)) {
+            val left = Address(
+                text = groups[0],
+                parsed = parseRef(groups[0])
+            )
+            val right = Address(
+                text = groups[1],
+                parsed = parseRef(groups[1])
+            )
+            ParsedTest(
+                left = left,
+                right = right,
+                op = regex.find(test)!!.value
+            )
         } else {
-            d.add("left", JsonObject().apply {
-                addProperty("text", triple[0])
-                add("parsed", parseRef(triple[0]))
-            })
-            d.addProperty("op", triple[1])
-            d.add("right", JsonObject().apply {
-                addProperty("text", triple[2])
-                add("parsed", parseRef(triple[2]))
-            })
+            Logger.getLogger(Sniffer::class.java.name).info("ERROR: Does not parse: $test")
+            null
         }
-        return d
     }
 
-    private fun parseRef(ref: String): JsonObject {
+    private fun parseRef(ref: String): Map<String, String> {
         val m = bcvPattern.matcher(ref)
         return if (m.find()) {
-            JsonObject().apply {
-                addProperty("book", m.group(2).uppercase())
-                addProperty("chapter", m.group(3).toInt())
-                addProperty("verse", m.group(4).toInt())
-                if (m.group(5) != null) addProperty("words", m.group(5).toInt())
-                if (m.group(6) != null) addProperty("factor", m.group(6).toInt())
+            mutableMapOf(
+                "book" to m.group(2).uppercase(),
+                "chapter" to m.group(3),
+                "verse" to m.group(4)
+            ).also { map ->
+                if (m.group(5) != null) map["words"] = m.group(5)
+                if (m.group(6) != null) map["factor"] = m.group(6)
                 if (!canons.bookIds.contains(m.group(2).uppercase())) {
                     Logger.getLogger(Sniffer::class.java.name).info("ERROR: ${m.group(2).uppercase()} is not a valid USFM book name")
                 }
             }
         } else {
-            JsonObject().apply { addProperty("keyword", ref.trim()) }
+            mapOf("keyword" to ref.trim())
         }
     }
 
-    private fun mapTo(rule: JsonObject): Int? {
+    private fun mapTo(rule: Rule): Int? {
         var to: Int? = null
-        val name = rule["name"].asString
-        val columns = rule["columns"].asJsonArray
-        for (c in 0 until columns.size()) {
-            if (columns[c].asString.contains("Hebrew")) {
-                return c
-            } else if (columns[c].asString.contains("Greek")) {
-                to = c
+        val name = rule.name
+        val columns = rule.columns
+        for (c in columns) {
+            if (c.contains("Hebrew")) {
+                return columns.indexOf(c)
+            } else if (c.contains("Greek")) {
+                to = columns.indexOf(c)
             }
         }
         return to
     }
 
-    private fun createMappings(rule: JsonNode, fromColumn: Int, toColumn: Int) {
-        Logger.getLogger(Sniffer::class.java.name).info("createMappings(), rule=${rule["name"]}")
+    private fun createMappings(rule: Rule, fromColumn: Int, toColumn: Int) {
+        Logger.getLogger(Sniffer::class.java.name).info("createMappings(), rule=${rule.name}")
         Logger.getLogger(Sniffer::class.java.name).info("Map from column $fromColumn to column $toColumn")
-        for (r in rule["ranges"].asJsonArray) {
-            for (k in r.asJsonObject.keySet()) {
-                val ranges = r.asJsonObject[k].asJsonArray
-                if (maxOf(fromColumn, toColumn) <= ranges.size() - 1) {
-                    val frum = ranges[fromColumn].asString.uppercase().replace(".", " ", true)
-                    val to = ranges[toColumn].asString.uppercase().replace(".", " ", true)
-                    Logger.getLogger(Sniffer::class.java.name).info("$frum : $to")
-                    if (frum != to && to != "NOVERSE") {
-                        versification.verseMappings[frum] = to
-                    }
-                } else {
-                    Logger.getLogger(Sniffer::class.java.name).info("### Error: missing column in mapping")
+        for (range in rule.ranges) {
+            val actualRange = mapFromRange(range)
+            if (maxOf(fromColumn, toColumn) <= actualRange.size - 1) {
+                val frum = actualRange[fromColumn].uppercase().replace(".", " ", true)
+                val to = actualRange[toColumn].uppercase().replace(".", " ", true)
+                Logger.getLogger(Sniffer::class.java.name).info("$frum : $to")
+                if (frum != to && to != "NOVERSE") {
+                    versification.verseMappings[frum] = to
                 }
+            } else {
+                Logger.getLogger(Sniffer::class.java.name).info("### Error: missing column in mapping")
             }
         }
     }
