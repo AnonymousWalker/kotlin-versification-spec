@@ -5,6 +5,9 @@ import org.wycliffeassociates.usfmtools.models.markers.CMarker
 import org.wycliffeassociates.usfmtools.models.markers.IDMarker
 import org.wycliffeassociates.usfmtools.models.markers.TextBlock
 import org.wycliffeassociates.usfmtools.models.markers.VMarker
+import org.wycliffeassociates.versificationspec.entity.ChapterNode
+import org.wycliffeassociates.versificationspec.entity.ScriptureTree
+import org.wycliffeassociates.versificationspec.entity.VerseNode
 import java.io.File
 
 class UsfmVersificationMapper {
@@ -53,8 +56,9 @@ class UsfmVersificationMapper {
         return spec
     }
 
-    fun verseListToDict(verseList: List<ContentRow>): Map<String, Map<String, Map<String, String>>> {
-        val books = mutableMapOf<String, MutableMap<String, MutableMap<String, String>>>()
+    fun verseListToDict(verseList: List<ContentRow>): ScriptureTree {
+//        val books = mutableMapOf<String, MutableMap<String, MutableMap<String, String>>>()
+        val tree = ScriptureTree()
 
         for (row in verseList) {
             val verse = Verse(
@@ -67,20 +71,20 @@ class UsfmVersificationMapper {
             val rowVerseNumber = row.verseNumber
             val rowText = row.verseText
 
-            if (!books.containsKey(rowBook)) {
-                books[rowBook] = mutableMapOf()
+            if (!tree.books.containsKey(rowBook)) {
+                tree.books[rowBook] = ChapterNode()
             }
-            if (!books[rowBook]!!.containsKey(rowChapter)) {
-                books[rowBook]!![rowChapter] = mutableMapOf()
+            if (tree.books[rowBook]?.chapters?.containsKey(rowChapter) == false) {
+                tree.books[rowBook]!!.chapters[rowChapter] = VerseNode()
             }
-            if (books[rowBook]!![rowChapter]!!.containsKey(rowVerseNumber)) {
+            if (tree.books[rowBook]?.chapters?.get(rowChapter)?.verses?.containsKey(rowVerseNumber) == true) {
                 // verse already exists for the given book-chapter-verse
                 throw Exception("Verse already exists")
             }
 
-            books[rowBook]!![rowChapter]!![rowVerseNumber] = rowText
+            tree.books[rowBook]!!.chapters[rowChapter]!!.verses[rowVerseNumber] = rowText
         }
 
-        return books
+        return tree
     }
 }

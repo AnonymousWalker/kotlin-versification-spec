@@ -5,18 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.wycliffeassociates.versificationspec.entity.Address
+import org.wycliffeassociates.versificationspec.entity.ScriptureTree
 import org.wycliffeassociates.versificationspec.entity.ParsedTest
 import org.wycliffeassociates.versificationspec.entity.Rule
 import org.wycliffeassociates.versificationspec.entity.Versification
 import org.wycliffeassociates.versificationspec.entity.canonBookIds
 import java.io.File
-import java.io.FileWriter
 import java.util.logging.Logger
 import java.util.regex.Pattern
 import kotlin.collections.HashMap
 
 class Sniffer(
-    books: Map<String, Map<String, Map<String, String>>>,
+    tree: ScriptureTree,
     outdir: String = "../../data/output/",
     vrs: Boolean = false,
     mappings: String = "../../versification-mappings/standard-mappings",
@@ -32,12 +32,12 @@ class Sniffer(
 
     init {
         // Ensure all chapters are int and verses are str
-        for ((b, bookMap) in books) {
+        for ((b, bookMap) in tree.books) {
             val chapterMap = HashMap<Int, MutableMap<String, String>>()
-            for ((c, chapterMapRaw) in bookMap) {
+            for ((c, chapterMapRaw) in bookMap.chapters) {
                 val verseMap = HashMap<String, String>()
-                for ((v, verse) in chapterMapRaw) {
-                    verseMap[v.toString()] = verse
+                for ((v, verse) in chapterMapRaw.verses) {
+                    verseMap[v] = verse
                 }
                 chapterMap[c.toInt()] = verseMap
             }
