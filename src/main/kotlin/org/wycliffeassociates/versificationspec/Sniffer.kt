@@ -8,15 +8,12 @@ import org.wycliffeassociates.versificationspec.entity.Address
 import org.wycliffeassociates.versificationspec.entity.ParsedTest
 import org.wycliffeassociates.versificationspec.entity.Rule
 import org.wycliffeassociates.versificationspec.entity.Versification
+import org.wycliffeassociates.versificationspec.entity.canonBookIds
 import java.io.File
 import java.io.FileWriter
 import java.util.logging.Logger
 import java.util.regex.Pattern
 import kotlin.collections.HashMap
-
-object canons {
-    val bookIds = listOf<String>()
-}
 
 class Sniffer(
     books: Map<String, Map<String, Map<String, String>>>,
@@ -54,25 +51,26 @@ class Sniffer(
         }
     }
 
-    fun sniff(name: String? = null) {
-        val versificationName = name ?: "custom_versification"
-        versification.shortname = versificationName
+    fun sniff(versificationName: String = "custom_versification"): Versification {
+        versification = Versification(
+            shortname = versificationName,
+            maxVerses = mutableMapOf(),
+            partialVerses = mutableMapOf(),
+            verseMappings = mutableMapOf(),
+            excludedVerses = mutableListOf()
+        )
         maxVerses()
         mappedVerses()
 //        versification.partialVerses.forEach { key, value ->
-//            (value as MutableList<*>).sort() // TODO
+//            (value as MutableList<*>).sort()
 //        }
-        val outfile = "${args["outdir"]}/$versificationName.json"
-        FileWriter(outfile).use { it.write(versification.toString()) }
+//        val outfile = "${args["outdir"]}/$versificationName.json"
+//        FileWriter(outfile).use { it.write(versification.toString()) }
+        return versification
     }
 
     private fun maxVerses() {
-        versification.maxVerses = mutableMapOf<String, List<Int>>()
-        versification.partialVerses = mutableMapOf<String, MutableList<String>>()
-        versification.verseMappings = mutableMapOf<String, String>()
-        versification.excludedVerses = mutableListOf<String>()
-
-        for (book in canons.bookIds) {
+        for (book in canonBookIds) {
             if (_books.containsKey(book)) {
                 val maxVerses = HashMap<Int, Int>()
                 for ((chapter, verses) in _books[book]!!) {
@@ -293,7 +291,7 @@ class Sniffer(
             ).also { map ->
                 if (m.group(5) != null) map["words"] = m.group(5)
                 if (m.group(6) != null) map["factor"] = m.group(6)
-                if (!canons.bookIds.contains(m.group(2).uppercase())) {
+                if (!canonBookIds.contains(m.group(2).uppercase())) {
                     Logger.getLogger(Sniffer::class.java.name).info("ERROR: ${m.group(2).uppercase()} is not a valid USFM book name")
                 }
             }

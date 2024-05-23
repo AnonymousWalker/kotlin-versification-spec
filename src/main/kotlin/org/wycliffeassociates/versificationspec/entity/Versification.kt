@@ -5,5 +5,5 @@ data class Versification (
     var maxVerses: MutableMap<String, List<Int>>,
     var partialVerses: MutableMap<String, MutableList<String>> = mutableMapOf(),
     var verseMappings: MutableMap<String, String> = mutableMapOf(),
-    var excludedVerses: List<String> = listOf()
+    var excludedVerses: MutableList<String> = mutableListOf()
 )
