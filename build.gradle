@@ -7,11 +7,12 @@ version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+    maven { url "https://nexus-registry.walink.org/repository/maven-public/" }
 }
 
 dependencies {
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.15.1"
-
+    implementation 'org.wycliffeassociates:usfmtools:1.9.1'
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
 }
 
