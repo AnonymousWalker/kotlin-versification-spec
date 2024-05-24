@@ -45,10 +45,7 @@ class Sniffer(
         }
 
         // Ensure output path is present
-        val outputDir = File(outdir)
-        if (!outputDir.isDirectory) {
-            outputDir.mkdir()
-        }
+        File(outdir).mkdir()
     }
 
     fun sniff(versificationName: String = "custom_versification"): Versification {
@@ -56,7 +53,7 @@ class Sniffer(
             shortname = versificationName,
             maxVerses = mutableMapOf(),
             partialVerses = mutableMapOf(),
-            verseMappings = mutableMapOf(),
+            mappedVerses = mutableMapOf(),
             excludedVerses = mutableListOf()
         )
         maxVerses()
@@ -116,8 +113,6 @@ class Sniffer(
             mapper.readValue(text)
         }
         for (rule in rules) {
-            Logger.getLogger(Sniffer::class.java.name).info("-------------------------")
-            Logger.getLogger(Sniffer::class.java.name).info("Rule: " + rule.name)
             val fromColumn = mapFrom(rule)
             if (fromColumn != null) {
                 val toColumn = mapTo(rule)
@@ -129,28 +124,17 @@ class Sniffer(
     }
 
     private fun doTest(parsedTest: ParsedTest): Boolean {
-        Logger.getLogger(Sniffer::class.java.name).info("doTest()")
         val left = parsedTest.left.parsed
         val right = parsedTest.right.parsed
         val op = parsedTest.op
 
         val keyword = right["keyword"]
-        Logger.getLogger(Sniffer::class.java.name).info(left.toString())
-        Logger.getLogger(Sniffer::class.java.name).info(op)
-        Logger.getLogger(Sniffer::class.java.name).info(right.toString())
-
         val book = left["book"]!!
         val chapter = left["chapter"]!!.toInt()
         val verse = left["verse"]!!.toInt()
 
-        if (!bookExists(book)) {
-            Logger.getLogger(Sniffer::class.java.name).info(left["book"] + " not found in books")
+        if (!bookExists(book) || !chapterExists(book, chapter)) {
             return false
-        } else if (!chapterExists(book, chapter)) {
-            Logger.getLogger(Sniffer::class.java.name).info("Chapter " + left["chapter"] + " not found in " + left["book"])
-            return false
-        } else {
-            Logger.getLogger(Sniffer::class.java.name).info(left["book"] + " found in books")
         }
 
         when {
@@ -170,7 +154,6 @@ class Sniffer(
                 return false
             }
             else -> {
-                Logger.getLogger(Sniffer::class.java.name).info("Error in test!  (not implemented?)")
                 return false
             }
         }
@@ -190,15 +173,7 @@ class Sniffer(
     }
 
     private fun isLastInChapter(book: String, chapter: Int, verse: Int): Boolean {
-        Logger.getLogger(Sniffer::class.java.name).info("isLastInChapter()")
-        Logger.getLogger(Sniffer::class.java.name).info(createSid(book, chapter, verse) + " => " + versification.maxVerses[book]!![chapter - 1])
-        return if (verse == versification.maxVerses[book]!![chapter - 1]) {
-            Logger.getLogger(Sniffer::class.java.name).info("Last in chapter")
-            true
-        } else {
-            Logger.getLogger(Sniffer::class.java.name).info("Not last in chapter")
-            false
-        }
+        return verse == versification.maxVerses[book]!![chapter - 1]
     }
 
     private fun hasMoreWords(ref: Map<String, String>, comparison: Map<String, String>): Boolean {
@@ -249,11 +224,9 @@ class Sniffer(
         for (test in tests) {
             val pt = parseTest(test)
             if (pt == null || !doTest(pt)) {
-                Logger.getLogger(Sniffer::class.java.name).info("doTest() returns false")
                 return false
             }
         }
-        Logger.getLogger(Sniffer::class.java.name).info("doTest() returns true")
         return true
     }
 
@@ -276,7 +249,6 @@ class Sniffer(
                 op = regex.find(test)!!.value
             )
         } else {
-            Logger.getLogger(Sniffer::class.java.name).info("ERROR: Does not parse: $test")
             null
         }
     }
@@ -315,16 +287,13 @@ class Sniffer(
     }
 
     private fun createMappings(rule: Rule, fromColumn: Int, toColumn: Int) {
-        Logger.getLogger(Sniffer::class.java.name).info("createMappings(), rule=${rule.name}")
-        Logger.getLogger(Sniffer::class.java.name).info("Map from column $fromColumn to column $toColumn")
         for (range in rule.ranges) {
             val actualRange = mapFromRange(range)
             if (maxOf(fromColumn, toColumn) <= actualRange.size - 1) {
-                val frum = actualRange[fromColumn].uppercase().replace(".", " ", true)
-                val to = actualRange[toColumn].uppercase().replace(".", " ", true)
-                Logger.getLogger(Sniffer::class.java.name).info("$frum : $to")
-                if (frum != to && to != "NOVERSE") {
-                    versification.verseMappings[frum] = to
+                val fr = actualRange[fromColumn].uppercase().replaceFirst(".", " ")
+                val to = actualRange[toColumn].uppercase().replaceFirst(".", " ")
+                if (fr != to && to != "NOVERSE") {
+                    versification.mappedVerses[fr] = to
                 }
             } else {
                 Logger.getLogger(Sniffer::class.java.name).info("### Error: missing column in mapping")

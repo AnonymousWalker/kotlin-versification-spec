@@ -11,7 +11,6 @@ import org.wycliffeassociates.versificationspec.entity.VerseNode
 import java.io.File
 
 class UsfmVersificationMapper {
-    private val verseList = mutableListOf<ContentRow>()
 
     fun parse(input: File): UsfmVersification {
         val parser = USFMParser()
@@ -56,15 +55,10 @@ class UsfmVersificationMapper {
         return spec
     }
 
-    fun verseListToDict(verseList: List<ContentRow>): ScriptureTree {
-//        val books = mutableMapOf<String, MutableMap<String, MutableMap<String, String>>>()
+    fun verseListToTree(verseList: List<ContentRow>): ScriptureTree {
         val tree = ScriptureTree()
 
         for (row in verseList) {
-            val verse = Verse(
-                verseNumber = row.verseNumber,
-                verseText = row.verseText
-            )
 
             val rowBook = row.book
             val rowChapter = row.chapter
