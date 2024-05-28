@@ -39,8 +39,7 @@ class TestVersificationSniffer {
 
         val tree = mapper.verseListToTree(verseList)
         val versification = VersificationSniffer(
-            tree,
-            """D:\Projects\kotlin-versification-spec\src\main\resources\rules\merged_rules.json"""
+            tree
         ).sniff("test_versification")
 
         val expectedFile = getResource("versification/vers.json")
