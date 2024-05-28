@@ -10,14 +10,16 @@ import org.bibletranslationtools.versificationspec.entity.ParsedTest
 import org.bibletranslationtools.versificationspec.entity.Rule
 import org.bibletranslationtools.versificationspec.entity.Versification
 import org.bibletranslationtools.versificationspec.entity.canonBookIds
+import org.bibletranslationtools.versificationspec.usfm.UsfmContentMapper
 import java.io.File
 import java.util.logging.Logger
 import java.util.regex.Pattern
 import kotlin.collections.HashMap
+import kotlin.jvm.Throws
 
 class VersificationSniffer(
     tree: ScriptureTree,
-    rules: String = "../rules/merged_rules.json"
+    private val rules: List<Rule>
 ) {
     private val _books = HashMap<String, MutableMap<Int, MutableMap<String, String>>>()
     private lateinit var versification: Versification
@@ -25,11 +27,6 @@ class VersificationSniffer(
     private val sidTemplate = "\$book \$chapter:\$verse"
     private val bcvPattern = Pattern.compile("""((\w+)\.(\d+):(\d+)\.?(\d+)?\*?(\d+)?)""")
     private val factorPattern = Pattern.compile("""\*?(\d+)""")
-    private val rules: List<Rule> = File(rules).readText().let { text ->
-        ObjectMapper(JsonFactory())
-            .registerKotlinModule()
-            .readValue(text)
-    }
 
     init {
         // Ensure all chapters are int and verses are str
@@ -46,7 +43,7 @@ class VersificationSniffer(
         }
     }
 
-    fun sniff(versificationName: String = "custom_versification"): Versification {
+    fun sniff(versificationName: String? = null): Versification {
         versification = Versification(
             shortname = versificationName,
             maxVerses = mutableMapOf(),

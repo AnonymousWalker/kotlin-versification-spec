@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import org.bibletranslationtools.versificationspec.entity.Rule
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.bibletranslationtools.versificationspec.entity.Versification
@@ -37,7 +38,7 @@ class TestVersificationSniffer {
         val scriptureTree = UsfmContentMapper.mapToTree(files)
         val versification = VersificationSniffer(
             scriptureTree,
-            """D:\Projects\kotlin-versification-spec\src\main\resources\rules\merged_rules.json"""
+            getRules()
         ).sniff("test_versification")
 
         val expectedFile = getResource("versification/vers.json")
@@ -46,6 +47,18 @@ class TestVersificationSniffer {
             .readValue<Versification>(expectedFile)
 
         assertEquals(expectedVersification, versification)
+    }
+
+    private fun getRules(): List<Rule> {
+        val rules: List<Rule> = VersificationSniffer::class.java.classLoader
+            .getResourceAsStream("rules/merged_rules.json")!!
+            .use {
+                ObjectMapper(JsonFactory())
+                    .registerKotlinModule()
+                    .readValue(it)
+            }
+
+        return rules
     }
 
     private fun getResource(path: String): File {
