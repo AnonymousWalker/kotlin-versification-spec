@@ -2,7 +2,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.9.22'
 }
 
-group = 'org.wycliffeassociates'
+group = 'org.bibletranslationtools'
 version = '1.0-SNAPSHOT'
 
 repositories {

@@ -6,10 +6,10 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.wycliffeassociates.versificationspec.VersificationSniffer
-import org.wycliffeassociates.versificationspec.entity.Versification
-import org.wycliffeassociates.versificationspec.usfm.ContentRow
-import org.wycliffeassociates.versificationspec.usfm.UsfmVersificationMapper
+import org.bibletranslationtools.versificationspec.VersificationSniffer
+import org.bibletranslationtools.versificationspec.entity.Versification
+import org.bibletranslationtools.versificationspec.usfm.ContentRow
+import org.bibletranslationtools.versificationspec.usfm.UsfmVersificationMapper
 import java.io.File
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test

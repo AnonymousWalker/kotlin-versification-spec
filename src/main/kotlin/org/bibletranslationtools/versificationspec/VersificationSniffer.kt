@@ -1,15 +1,15 @@
-package org.wycliffeassociates.versificationspec
+package org.bibletranslationtools.versificationspec
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import org.wycliffeassociates.versificationspec.entity.Address
-import org.wycliffeassociates.versificationspec.entity.ScriptureTree
-import org.wycliffeassociates.versificationspec.entity.ParsedTest
-import org.wycliffeassociates.versificationspec.entity.Rule
-import org.wycliffeassociates.versificationspec.entity.Versification
-import org.wycliffeassociates.versificationspec.entity.canonBookIds
+import org.bibletranslationtools.versificationspec.entity.Address
+import org.bibletranslationtools.versificationspec.entity.ScriptureTree
+import org.bibletranslationtools.versificationspec.entity.ParsedTest
+import org.bibletranslationtools.versificationspec.entity.Rule
+import org.bibletranslationtools.versificationspec.entity.Versification
+import org.bibletranslationtools.versificationspec.entity.canonBookIds
 import java.io.File
 import java.util.logging.Logger
 import java.util.regex.Pattern

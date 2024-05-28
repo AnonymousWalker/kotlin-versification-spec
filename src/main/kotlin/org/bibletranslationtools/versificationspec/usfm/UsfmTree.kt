@@ -1,4 +1,4 @@
-package org.wycliffeassociates.versificationspec.usfm
+package org.bibletranslationtools.versificationspec.usfm
 
 class UsfmTree(
     val book: Book,

@@ -1,13 +1,13 @@
-package org.wycliffeassociates.versificationspec.usfm
+package org.bibletranslationtools.versificationspec.usfm
 
 import org.wycliffeassociates.usfmtools.USFMParser
 import org.wycliffeassociates.usfmtools.models.markers.CMarker
 import org.wycliffeassociates.usfmtools.models.markers.IDMarker
 import org.wycliffeassociates.usfmtools.models.markers.TextBlock
 import org.wycliffeassociates.usfmtools.models.markers.VMarker
-import org.wycliffeassociates.versificationspec.entity.ChapterNode
-import org.wycliffeassociates.versificationspec.entity.ScriptureTree
-import org.wycliffeassociates.versificationspec.entity.VerseNode
+import org.bibletranslationtools.versificationspec.entity.ChapterNode
+import org.bibletranslationtools.versificationspec.entity.ScriptureTree
+import org.bibletranslationtools.versificationspec.entity.VerseNode
 import java.io.File
 
 class UsfmVersificationMapper {

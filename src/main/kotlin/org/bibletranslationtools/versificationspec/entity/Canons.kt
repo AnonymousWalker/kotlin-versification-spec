@@ -1,4 +1,4 @@
-package org.wycliffeassociates.versificationspec.entity
+package org.bibletranslationtools.versificationspec.entity
 
 val canonBookIds = listOf(
     "GEN",

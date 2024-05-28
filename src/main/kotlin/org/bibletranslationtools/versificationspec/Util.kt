@@ -1,6 +1,6 @@
-package org.wycliffeassociates.versificationspec
+package org.bibletranslationtools.versificationspec
 
-import org.wycliffeassociates.versificationspec.entity.Range
+import org.bibletranslationtools.versificationspec.entity.Range
 
 fun mapFromRange(range: Range): List<String> {
     // Using when statement to check each field

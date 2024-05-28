@@ -1,4 +1,4 @@
-package org.wycliffeassociates.versificationspec.entity
+package org.bibletranslationtools.versificationspec.entity
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties

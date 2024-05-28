@@ -1,4 +1,4 @@
-package org.wycliffeassociates.versificationspec.entity
+package org.bibletranslationtools.versificationspec.entity
 
 data class ParsedTest(
     val left: Address,
