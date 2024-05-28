@@ -12,7 +12,7 @@ import java.io.File
 
 class UsfmVersificationMapper {
 
-    fun parse(input: File): UsfmVersification {
+    fun parse(input: File): UsfmTree {
         val parser = USFMParser()
         val parsedDoc = parser.parseFromString(input.readText())
 
@@ -30,7 +30,7 @@ class UsfmVersificationMapper {
                 }
             } ?: listOf("unknown", "Unknown Book")
 
-        val spec = UsfmVersification(
+        val spec = UsfmTree(
             Book(bookCode, description),
             arrayListOf()
         )

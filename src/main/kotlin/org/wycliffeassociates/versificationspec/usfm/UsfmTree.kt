@@ -1,6 +1,6 @@
 package org.wycliffeassociates.versificationspec.usfm
 
-class UsfmVersification(
+class UsfmTree(
     val book: Book,
     val chapters: List<Chapter>
 ) {
