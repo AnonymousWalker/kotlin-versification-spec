@@ -286,4 +286,46 @@ class VersificationSniffer(
             }
         }
     }
+
+    companion object {
+        fun sniff(files: List<File>): Versification {
+            checkInputFiles(files)
+
+            val rules: List<Rule> = VersificationSniffer::class.java.classLoader
+                .getResourceAsStream("rules/merged_rules.json")!!
+                .use {
+                    ObjectMapper(JsonFactory())
+                        .registerKotlinModule()
+                        .readValue(it)
+                }
+
+            val tree = UsfmContentMapper.mapToTree(files)
+
+            return VersificationSniffer(tree, rules).sniff()
+        }
+
+        fun sniff(files: List<File>, rulesFile: File): Versification {
+            checkInputFiles(files)
+
+            if (rulesFile.isFile || rulesFile.extension != "json") {
+                throw IllegalArgumentException("Rules file is invalid: $rulesFile.")
+            }
+
+            val rules: List<Rule> = ObjectMapper(JsonFactory())
+                .registerKotlinModule()
+                .readValue(rulesFile)
+
+            val tree = UsfmContentMapper.mapToTree(files)
+
+            return VersificationSniffer(tree, rules).sniff()
+        }
+
+        @Throws(IllegalArgumentException::class)
+        private fun checkInputFiles(files: List<File>) {
+            files.firstOrNull { it.extension != "usfm" || !it.isFile }
+                ?.let {
+                    throw IllegalArgumentException("Invalid file path: $it")
+                }
+        }
+    }
 }
