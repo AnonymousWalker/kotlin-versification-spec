@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Versification (
-    var shortname: String,
+    var shortname: String? = null,
     var maxVerses: MutableMap<String, List<Int>>,
     var partialVerses: MutableMap<String, MutableList<String>> = mutableMapOf(),
     @JsonAlias("verseMappings")

@@ -6,7 +6,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.wycliffeassociates.versificationspec.Sniffer
+import org.wycliffeassociates.versificationspec.VersificationSniffer
 import org.wycliffeassociates.versificationspec.entity.Versification
 import org.wycliffeassociates.versificationspec.usfm.ContentRow
 import org.wycliffeassociates.versificationspec.usfm.UsfmVersificationMapper
@@ -15,7 +15,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class TestSniffer {
+class TestVersificationSniffer {
 
     private val verseList = mutableListOf<ContentRow>()
     private val mapper = UsfmVersificationMapper()
@@ -38,11 +38,8 @@ class TestSniffer {
         getResource("usfm/66-JUD.usfm").let { processFile(it) }
 
         val tree = mapper.verseListToTree(verseList)
-        val versification = Sniffer(
+        val versification = VersificationSniffer(
             tree,
-            """D:\misc\temp\versification""",
-            false,
-            """D:\Projects\kotlin-versification-spec\src\main\resources\standard-mappings""",
             """D:\Projects\kotlin-versification-spec\src\main\resources\rules\merged_rules.json"""
         ).sniff("test_versification")
 

@@ -15,20 +15,21 @@ import java.util.logging.Logger
 import java.util.regex.Pattern
 import kotlin.collections.HashMap
 
-class Sniffer(
+class VersificationSniffer(
     tree: ScriptureTree,
-    outdir: String = "../../data/output/",
-    vrs: Boolean = false,
-    mappings: String = "../../versification-mappings/standard-mappings",
     rules: String = "../rules/merged_rules.json"
 ) {
     private val _books = HashMap<String, MutableMap<Int, MutableMap<String, String>>>()
     private lateinit var versification: Versification
     private val verseIndex = HashMap<String, Any>()
-    private val args = hashMapOf("outdir" to outdir, "vrs" to vrs, "mappings" to mappings, "rules" to rules)
     private val sidTemplate = "\$book \$chapter:\$verse"
     private val bcvPattern = Pattern.compile("""((\w+)\.(\d+):(\d+)\.?(\d+)?\*?(\d+)?)""")
     private val factorPattern = Pattern.compile("""\*?(\d+)""")
+    private val rules: List<Rule> = File(rules).readText().let { text ->
+        ObjectMapper(JsonFactory())
+            .registerKotlinModule()
+            .readValue(text)
+    }
 
     init {
         // Ensure all chapters are int and verses are str
@@ -43,9 +44,6 @@ class Sniffer(
             }
             this._books[b] = chapterMap
         }
-
-        // Ensure output path is present
-        File(outdir).mkdir()
     }
 
     fun sniff(versificationName: String = "custom_versification"): Versification {
@@ -58,11 +56,6 @@ class Sniffer(
         )
         maxVerses()
         mappedVerses()
-//        versification.partialVerses.forEach { key, value ->
-//            (value as MutableList<*>).sort()
-//        }
-//        val outfile = "${args["outdir"]}/$versificationName.json"
-//        FileWriter(outfile).use { it.write(versification.toString()) }
         return versification
     }
 
@@ -108,10 +101,6 @@ class Sniffer(
     }
 
     private fun mappedVerses() {
-        val rules: List<Rule> = File(args["rules"].toString()).readText().let { text ->
-            val mapper = ObjectMapper(JsonFactory()).registerKotlinModule()
-            mapper.readValue(text)
-        }
         for (rule in rules) {
             val fromColumn = mapFrom(rule)
             if (fromColumn != null) {
@@ -264,7 +253,7 @@ class Sniffer(
                 if (m.group(5) != null) map["words"] = m.group(5)
                 if (m.group(6) != null) map["factor"] = m.group(6)
                 if (!canonBookIds.contains(m.group(2).uppercase())) {
-                    Logger.getLogger(Sniffer::class.java.name).info("ERROR: ${m.group(2).uppercase()} is not a valid USFM book name")
+                    Logger.getLogger(VersificationSniffer::class.java.name).info("ERROR: ${m.group(2).uppercase()} is not a valid USFM book name")
                 }
             }
         } else {
@@ -296,7 +285,7 @@ class Sniffer(
                     versification.mappedVerses[fr] = to
                 }
             } else {
-                Logger.getLogger(Sniffer::class.java.name).info("### Error: missing column in mapping")
+                Logger.getLogger(VersificationSniffer::class.java.name).info("### Error: missing column in mapping")
             }
         }
     }
