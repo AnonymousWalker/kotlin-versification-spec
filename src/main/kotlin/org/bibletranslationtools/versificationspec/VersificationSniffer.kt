@@ -277,7 +277,7 @@ class VersificationSniffer(
 
     private fun createMappings(rule: Rule, fromColumn: Int, toColumn: Int) {
         for (range in rule.ranges) {
-            val actualRange = mapFromRange(range)
+            val actualRange = range.values
             if (maxOf(fromColumn, toColumn) <= actualRange.size - 1) {
                 val fr = actualRange[fromColumn].uppercase().replaceFirst(".", " ")
                 val to = actualRange[toColumn].uppercase().replaceFirst(".", " ")
