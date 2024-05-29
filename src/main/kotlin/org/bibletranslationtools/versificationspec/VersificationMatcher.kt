@@ -36,7 +36,7 @@ object VersificationMatcher {
         a: Map<String, List<Int>>,
         b: Map<String, List<Int>>
     ): Boolean {
-        return a.all { (book, v) ->
+        return a.all { (book, _) ->
             a[book] == b[book] // all books in `a` exist in `b`
         }
     }
@@ -45,7 +45,7 @@ object VersificationMatcher {
         a: Map<String, MutableList<String>>,
         b: Map<String, MutableList<String>>
     ): Boolean {
-        return a.all { (key, value) ->
+        return a.all { (key, _) ->
             a[key] == b[key]
         }
     }
@@ -54,7 +54,7 @@ object VersificationMatcher {
         a: Map<String, String>,
         b: Map<String, String>
     ): Boolean {
-        return a.all { (key, value) ->
+        return a.all { (key, _) ->
             a[key] == b[key]
         }
     }

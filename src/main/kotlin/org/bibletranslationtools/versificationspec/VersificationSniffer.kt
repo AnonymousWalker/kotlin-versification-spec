@@ -260,7 +260,6 @@ class VersificationSniffer(
 
     private fun mapTo(rule: Rule): Int? {
         var to: Int? = null
-        val name = rule.name
         val columns = rule.columns
         for (c in columns) {
             if (c.contains("Hebrew")) {
