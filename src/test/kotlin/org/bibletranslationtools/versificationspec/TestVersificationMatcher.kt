@@ -23,11 +23,17 @@ class TestVersificationMatcher {
 
     @Test
     fun testMatchUsfm() {
-        val usfm = getResource("usfm/01-GEN.usfm")
-        val vers = VersificationSniffer.sniff(listOf(usfm))
-        val result = VersificationMatcher.match(vers)
+        var usfm = getResource("usfm/01-GEN.usfm")
+        var vers = VersificationSniffer.sniff(listOf(usfm))
+        var result = VersificationMatcher.match(vers)
 
-        assertEquals(result.shortname, StandardMapping.ENG.name)
+        assertEquals(StandardMapping.ENG.name, result.shortname)
+
+        usfm = getResource("usfm/66-JUD.usfm")
+        vers = VersificationSniffer.sniff(listOf(usfm))
+        result = VersificationMatcher.match(vers)
+
+        assertEquals(StandardMapping.ORG.name, result.shortname)
     }
 
     private fun getResource(path: String): File {
