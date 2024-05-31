@@ -4,12 +4,11 @@ import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import org.bibletranslationtools.versificationspec.entity.Rule
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.bibletranslationtools.versificationspec.VersificationSniffer
 import org.bibletranslationtools.versificationspec.entity.Versification
-import org.bibletranslationtools.versificationspec.usfm.ContentRow
-import org.bibletranslationtools.versificationspec.usfm.UsfmVersificationMapper
+import org.bibletranslationtools.versificationspec.usfm.UsfmContentMapper
 import java.io.File
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
@@ -17,8 +16,6 @@ import kotlin.test.assertEquals
 
 class TestVersificationSniffer {
 
-    private val verseList = mutableListOf<ContentRow>()
-    private val mapper = UsfmVersificationMapper()
     private lateinit var tempDir: File
 
     @BeforeEach
@@ -32,14 +29,16 @@ class TestVersificationSniffer {
     }
 
     @Test
-    fun testSniff() {
-        getResource("usfm/01-GEN.usfm").let { processFile(it) }
-        getResource("usfm/19-PSA.usfm").let { processFile(it) }
-        getResource("usfm/66-JUD.usfm").let { processFile(it) }
-
-        val tree = mapper.verseListToTree(verseList)
+    fun testSniffUsfm() {
+        val files = listOf(
+            getResource("usfm/01-GEN.usfm"),
+            getResource("usfm/19-PSA.usfm"),
+            getResource("usfm/66-JUD.usfm")
+        )
+        val scriptureTree = UsfmContentMapper.mapToTree(files)
         val versification = VersificationSniffer(
-            tree
+            scriptureTree,
+            getRules()
         ).sniff("test_versification")
 
         val expectedFile = getResource("versification/vers.json")
@@ -50,20 +49,16 @@ class TestVersificationSniffer {
         assertEquals(expectedVersification, versification)
     }
 
-    private fun processFile(input: File) {
-        val vers = mapper.parse(input)
-
-        val bookCode = vers.book.bookCode
-        vers.chapters.forEach { ch ->
-            val chapterNumber = ch.chapterNumber
-            ch.contents.forEach { v ->
-                val verseNumber = v.verseNumber
-                val verseText = v.verseText
-                verseList.add(
-                    ContentRow(bookCode, chapterNumber, verseNumber, verseText)
-                )
+    private fun getRules(): List<Rule> {
+        val rules: List<Rule> = VersificationSniffer::class.java.classLoader
+            .getResourceAsStream("rules/merged_rules.json")!!
+            .use {
+                ObjectMapper(JsonFactory())
+                    .registerKotlinModule()
+                    .readValue(it)
             }
-        }
+
+        return rules
     }
 
     private fun getResource(path: String): File {

@@ -10,9 +10,21 @@ import org.bibletranslationtools.versificationspec.entity.ScriptureTree
 import org.bibletranslationtools.versificationspec.entity.VerseNode
 import java.io.File
 
-class UsfmVersificationMapper {
+object UsfmContentMapper {
 
-    fun parse(input: File): UsfmTree {
+    fun mapToTree(file: File): ScriptureTree {
+        val tree = parse(file)
+        val verseList = flatten(listOf(tree))
+        return verseListToTree(verseList)
+    }
+
+    fun mapToTree(files: List<File>): ScriptureTree {
+        val trees = files.map { f -> parse(f) }
+        val verseList = flatten(trees)
+        return verseListToTree(verseList)
+    }
+
+    private fun parse(input: File): UsfmTree {
         val parser = USFMParser()
         val parsedDoc = parser.parseFromString(input.readText())
 
@@ -30,14 +42,14 @@ class UsfmVersificationMapper {
                 }
             } ?: listOf("unknown", "Unknown Book")
 
-        val spec = UsfmTree(
+        val tree = UsfmTree(
             Book(bookCode, description),
             arrayListOf()
         )
 
         parsedDoc.contents.filterIsInstance<CMarker>().forEach { marker ->
             val chapter = Chapter(marker.number.toString(), arrayListOf())
-            spec.addChapter(chapter)
+            tree.addChapter(chapter)
 
             marker.getChildMarkers(VMarker::class.java).forEach { verseMarker ->
                 val text = verseMarker.getChildMarkers(TextBlock::class.java)
@@ -48,14 +60,34 @@ class UsfmVersificationMapper {
                     text
                 )
 
-                spec.addVerse(chapter, verse)
+                tree.addVerse(chapter, verse)
             }
         }
 
-        return spec
+        return tree
     }
 
-    fun verseListToTree(verseList: List<ContentRow>): ScriptureTree {
+    private fun flatten(usfmTrees: List<UsfmTree>): List<ContentRow> {
+        val verseList = mutableListOf<ContentRow>()
+
+        usfmTrees.forEach { usfmTree ->
+            val bookCode = usfmTree.book.bookCode
+            usfmTree.chapters.forEach { ch ->
+                val chapterNumber = ch.chapterNumber
+                ch.contents.forEach { v ->
+                    val verseNumber = v.verseNumber
+                    val verseText = v.verseText
+                    verseList.add(
+                        ContentRow(bookCode, chapterNumber, verseNumber, verseText)
+                    )
+                }
+            }
+        }
+
+        return verseList
+    }
+
+    private fun verseListToTree(verseList: List<ContentRow>): ScriptureTree {
         val tree = ScriptureTree()
 
         for (row in verseList) {

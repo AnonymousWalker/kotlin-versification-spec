@@ -10,14 +10,16 @@ import org.bibletranslationtools.versificationspec.entity.ParsedTest
 import org.bibletranslationtools.versificationspec.entity.Rule
 import org.bibletranslationtools.versificationspec.entity.Versification
 import org.bibletranslationtools.versificationspec.entity.canonBookIds
+import org.bibletranslationtools.versificationspec.usfm.UsfmContentMapper
 import java.io.File
 import java.util.logging.Logger
 import java.util.regex.Pattern
 import kotlin.collections.HashMap
+import kotlin.jvm.Throws
 
 class VersificationSniffer(
     tree: ScriptureTree,
-    rules: String = "../rules/merged_rules.json"
+    private val rules: List<Rule>
 ) {
     private val _books = HashMap<String, MutableMap<Int, MutableMap<String, String>>>()
     private lateinit var versification: Versification
@@ -25,11 +27,6 @@ class VersificationSniffer(
     private val sidTemplate = "\$book \$chapter:\$verse"
     private val bcvPattern = Pattern.compile("""((\w+)\.(\d+):(\d+)\.?(\d+)?\*?(\d+)?)""")
     private val factorPattern = Pattern.compile("""\*?(\d+)""")
-    private val rules: List<Rule> = File(rules).readText().let { text ->
-        ObjectMapper(JsonFactory())
-            .registerKotlinModule()
-            .readValue(text)
-    }
 
     init {
         // Ensure all chapters are int and verses are str
@@ -46,7 +43,7 @@ class VersificationSniffer(
         }
     }
 
-    fun sniff(versificationName: String = "custom_versification"): Versification {
+    fun sniff(versificationName: String? = null): Versification {
         versification = Versification(
             shortname = versificationName,
             maxVerses = mutableMapOf(),
@@ -263,7 +260,6 @@ class VersificationSniffer(
 
     private fun mapTo(rule: Rule): Int? {
         var to: Int? = null
-        val name = rule.name
         val columns = rule.columns
         for (c in columns) {
             if (c.contains("Hebrew")) {
@@ -287,6 +283,48 @@ class VersificationSniffer(
             } else {
                 Logger.getLogger(VersificationSniffer::class.java.name).info("### Error: missing column in mapping")
             }
+        }
+    }
+
+    companion object {
+        fun sniff(files: List<File>): Versification {
+            checkInputFiles(files)
+
+            val rules: List<Rule> = VersificationSniffer::class.java.classLoader
+                .getResourceAsStream("rules/merged_rules.json")!!
+                .use {
+                    ObjectMapper(JsonFactory())
+                        .registerKotlinModule()
+                        .readValue(it)
+                }
+
+            val tree = UsfmContentMapper.mapToTree(files)
+
+            return VersificationSniffer(tree, rules).sniff()
+        }
+
+        fun sniff(files: List<File>, rulesFile: File): Versification {
+            checkInputFiles(files)
+
+            if (rulesFile.isFile || rulesFile.extension != "json") {
+                throw IllegalArgumentException("Rules file is invalid: $rulesFile.")
+            }
+
+            val rules: List<Rule> = ObjectMapper(JsonFactory())
+                .registerKotlinModule()
+                .readValue(rulesFile)
+
+            val tree = UsfmContentMapper.mapToTree(files)
+
+            return VersificationSniffer(tree, rules).sniff()
+        }
+
+        @Throws(IllegalArgumentException::class)
+        private fun checkInputFiles(files: List<File>) {
+            files.firstOrNull { it.extension != "usfm" || !it.isFile }
+                ?.let {
+                    throw IllegalArgumentException("Invalid file path: $it")
+                }
         }
     }
 }
